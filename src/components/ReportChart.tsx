@@ -26,9 +26,7 @@ export default function ReportChart({ reports }: ReportChartProps) {
       const label = hour.toISOString().slice(11, 13) + ':00';
       buckets[label] = 0;
     }
-  console.log(reports)
     reports.forEach(report => {
-      console.log(report)
       try{
       const hour = report.timestamp.slice(11, 13) + ':00';
 
@@ -38,7 +36,6 @@ export default function ReportChart({ reports }: ReportChartProps) {
     }
     catch(error){
       console.log(error)
-      console.log(report)
     }
     });
 

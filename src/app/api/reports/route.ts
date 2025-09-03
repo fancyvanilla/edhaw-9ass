@@ -12,9 +12,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const report:userReport = await request.json()
-  console.log(report)
   const { data, error } = await supabase.from('reports').insert([{ report_time: report.report_time, city:report.location.city, region:report.location.region, postCode: parseInt(report.location.postCode) }])
-  console.log(error)
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
