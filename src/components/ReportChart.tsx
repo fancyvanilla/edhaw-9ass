@@ -26,12 +26,20 @@ export default function ReportChart({ reports }: ReportChartProps) {
       const label = hour.toISOString().slice(11, 13) + ':00';
       buckets[label] = 0;
     }
-
+  console.log(reports)
     reports.forEach(report => {
-      const hour = new Date(report.timestamp).toISOString().slice(11, 13) + ':00';
+      console.log(report)
+      try{
+      const hour = report.timestamp.slice(11, 13) + ':00';
+
       if (buckets[hour] !== undefined) {
         buckets[hour]++;
       }
+    }
+    catch(error){
+      console.log(error)
+      console.log(report)
+    }
     });
 
     return {

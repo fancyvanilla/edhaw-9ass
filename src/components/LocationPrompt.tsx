@@ -13,30 +13,44 @@ export default function LocationPrompt({ onLocationSet, location}: Props) {
     const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-        setError("Geolocation not supported");
-        return;
-    }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const { latitude, longitude } = pos.coords;
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-        );
-        const data = await res.json();
+    const fetchLocationBasedOnCoordinates=async(long:number,lat:number)=>{
+      const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${long}`
+      return fetch(url)
+      .then(res=>res.json())
+      .then(data=>{
         const loc: Location = {
           city: data.address.state_district,
           region: data.address.state ,
           postCode : data.address.postcode,
         };
         onLocationSet(loc);
-      } catch (err) {
+      })
+      .catch(err=>{
         console.log('Failed to reverse geocode:', err);
         setError('Failed to retrieve location');
-      }
-      finally{
+      })
+      .finally(()=>{
         setLoading(false);
-      }
+      });
+    }
+    const fetchLocation=async()=>{
+    const url=`https://api.geoapify.com/v1/ipinfo?apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}`
+    try {
+      const response=await fetch(url)
+      const data=await response.json()
+      const { latitude, longitude } = data.location
+      await fetchLocationBasedOnCoordinates(longitude,latitude)
+    }
+    catch(error){
+      console.log(error)
+      // Fallback: GEOAPIFY API quota exceeded, trying browser geolocation API
+      if (!navigator.geolocation) {
+        setError("Geolocation not supported");
+        return;
+     }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      await fetchLocationBasedOnCoordinates(longitude,latitude);
     }, (err) => {
         if (err.code !== err.PERMISSION_DENIED) {
         console.error('Geolocation error:', err);
@@ -46,8 +60,11 @@ export default function LocationPrompt({ onLocationSet, location}: Props) {
     },{
       maximumAge: 60000,
     });
-  }, [onLocationSet]);
-
+    }
+  }
+    fetchLocation()
+  }
+  , [onLocationSet]);
   let locationContent;
   if (location) {
     locationContent = (
@@ -77,7 +94,7 @@ export default function LocationPrompt({ onLocationSet, location}: Props) {
   if (loading) {
     locationContent = (
       <div className="flex items-center justify-center h-16">
-        <span className="text-gray-500">Loading location...</span>
+        <span className="text-gray-500">Detecting location...</span>
       </div>
     );
   }

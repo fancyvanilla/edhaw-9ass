@@ -9,3 +9,15 @@ export interface Report {
   timeCategory: "now" | "<1h" | ">1h";
   location: Location;
 }
+
+export type userReport = {
+    report_time: string;
+    location: Location
+}
+
+export type dbReport= {
+    report_time: string;
+    city: string;
+    region: string;
+    postCode: number;
+}

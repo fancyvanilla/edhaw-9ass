@@ -5,17 +5,17 @@ import OutageButton from '../components/OutageButton';
 import ReportChart from '../components/ReportChart';
 import ReportTable from '../components/ReportTable';
 import LocationsPieCharts from '../components/LocationsPieCharts';
-import {Location,Report} from '../types/types'
+import {Location,Report,dbReport} from '../types/types'
 import { useTheme } from 'next-themes';
 import { LightSwitchOn,LightSwitchOff } from '@/components/LightSwitches';
-
+import supabase  from '@/db/initSupabase'
 
 export default function HomePage() {
   const [location, setLocation] = useState<Location | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const { theme, setTheme } = useTheme();
 
-  const submitReport = (timeCategory: Report['timeCategory']) => {
+  const submitReport = async (timeCategory: Report['timeCategory']) => {
     if (!location) return alert('Location not set');
 
     const report: Report = {
@@ -24,14 +24,64 @@ export default function HomePage() {
       location,
     };
 
-    setReports((prev) => [...prev, report]);
+    const response = await fetch('/api/reports', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        report_time: report.timestamp,
+        location:report.location
+      }),
+    });
+    if (!response.ok) {
+      alert('Failed to submit report');
+    }
   };
+  
   useEffect(() => {
+
+    const changes = supabase
+    .channel('schema-db-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT', 
+        schema: 'public',
+        table: 'reports'
+      },
+      (_) => fetchReports()
+    )
+    .subscribe()
+
+    const fetchReports=async ()=>{
+    const response=await fetch("/api/reports")
+    if(!response.ok){
+      alert("error happened !")
+    }
+    const data=await response.json()
+    setReports(data.map((report:dbReport) =>{
+      return {
+        timestamp:report.report_time,
+        timeCategory:"now",
+        location:{
+          city:report.city,
+          region:report.region,
+          postCode:report.postCode
+        }
+      }
+    }))
+
+  }
+  fetchReports()
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme) {
       setTheme(storedTheme);
     } else {
       setTheme('dark');
+    }
+    return ()=>{
+      changes.unsubscribe();
     }
   }, []);
 
